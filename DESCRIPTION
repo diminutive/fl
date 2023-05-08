@@ -1,0 +1,16 @@
+Package: fl
+Title: Replaces raadtools, experimentally
+Version: 0.0.0.9000
+Authors@R: c(person("Michael", "Sumner", email = "mdsumner@gmail.com", role = c("aut", "cre")))
+Description: What the package does (one paragraph).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Language: es
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Imports: 
+    raad.times,
+    raadfiles,
+    stringr,
+    vapour
+Remotes: AustralianAntarcticDivision/raadfiles, diminutive/raad.times
