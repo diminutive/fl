@@ -14,3 +14,5 @@ Imports:
     stringr,
     vapour
 Remotes: AustralianAntarcticDivision/raadfiles, diminutive/raad.times
+URL: https://github.com/diminutive/fl
+BugReports: https://github.com/diminutive/fl/issues
