@@ -48,7 +48,7 @@ library(fl)
 #>  /rdsi/PRIVATE/raad/data_staging       
 #>  /rdsi/PRIVATE/raad/data_deprecated    
 #>  /rdsi/PUBLIC/raad/data                '
-#> Uploading raad file cache as at 2023-05-08 20:15:51 (1211638 files listed)
+#> Uploading raad file cache as at 2023-05-08 20:28:59 (1211638 files listed)
 files <- oisst_daily_sst_files(seq(as.Date("1992-03-21"), by = "1 month", length.out = 12L * 580))
 #> Warning in raad_dedupe(findex, qdate, removeDupes = TRUE): duplicated dates
 #> will be dropped
@@ -76,11 +76,11 @@ system.time({
 flist <- future_map_chr(files$datasource, func) 
 })
 #>    user  system elapsed 
-#>  12.538   5.051   9.374
+#>  26.054   7.395   4.499
 plan(sequential)
 
 str(basename(flist))
-#>  chr [1:374] "file95a95770715d0.tif" "file95a95234ce4d6.tif" ...
+#>  chr [1:374] "file9649a5dd944ab.tif" "file9649a5d499332.tif" ...
 # chr [1:374] "file90aa0142157a4.tif" "file90aa0453395b2.tif" "file90aa04bd28a87.tif" "file90aa05fb4b65d.tif" ...
 ```
 
@@ -102,3 +102,56 @@ plot(mn - rast(sample(flist, 1)))
 
 The data natively are in 0,360 - we can target any grid we want from
 this improved source collection.
+
+How long does it take to process to southern hemisphere 10000m.
+
+``` r
+library(fl)
+files <- oisst_daily_sst_files(seq(as.Date("1992-03-21"), by = "1 month", length.out = 12L * 580))
+#> Warning in raad_dedupe(findex, qdate, removeDupes = TRUE): duplicated dates
+#> will be dropped
+#> Warning in raad_match_files(date, fdate[findex], findex, daytest =
+#> switch(timeres, : 1 input dates have no corresponding data file within 1.500000
+#> days of available files
+#files <- oisst_daily_sst_files()
+
+
+## we can get a mean
+ext <- c(-1, 1, -1, 1) * 6378137 * pi/1.2
+res <- rep(25000, 2L)
+#mn <- vapour::gdal_raster_data(files$datasource, target_dim = dm, target_ext = ext)
+## or vectorize over sources
+#bands <- lapply(files$datasource, vapour::gdal_raster_data, target_dim = dm, target_ext = ext)
+
+
+library(furrr)
+options(parallelly.fork.enable = TRUE, future.rng.onMisuse = "ignore")
+plan(multicore)
+options(warn = 1)
+func <- function(.x) vapour::gdal_raster_dsn(.x, target_res = res, target_ext = ext, target_crs = "EPSG:3031", resample = "average")[[1]]
+
+## or write to file
+system.time({
+flist <- future_map_chr(files$datasource, func) 
+})
+
+#>     user   system  elapsed 
+#> 1280.388   25.012   44.706
+plan(sequential)
+
+str(basename(flist))
+#>  chr [1:374] "file9663f688f1a6e.tif" "file9663f88e4fd7.tif" ...
+# chr [1:374] "file90aa0142157a4.tif" "file90aa0453395b2.tif" "file90aa04bd28a87.tif" "file90aa05fb4b65d.tif" ...
+
+terra::rast(flist[1])
+#> class       : SpatRaster 
+#> dimensions  : 1336, 1336, 1  (nrow, ncol, nlyr)
+#> resolution  : 25000, 25000  (x, y)
+#> extent      : -16697924, 16702076, -16702076, 16697924  (xmin, xmax, ymin, ymax)
+#> coord. ref. : WGS 84 / Antarctic Polar Stereographic (EPSG:3031) 
+#> source      : file9663f688f1a6e.tif 
+#> name        : file9663f688f1a6e
+terra::plot(terra::rast(flist[1]))
+```
+
+<img src="man/figures/README-laea-1.png" width="100%" />

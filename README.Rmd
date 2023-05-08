@@ -100,6 +100,41 @@ plot(mn - rast(sample(flist, 1)))
 
 The data natively are in 0,360 - we can target any grid we want from this improved source collection. 
 
-```{r project}
 
+How long does it take to process to southern hemisphere 10000m. 
+
+
+```{r laea, eval=TRUE}
+library(fl)
+files <- oisst_daily_sst_files(seq(as.Date("1992-03-21"), by = "1 month", length.out = 12L * 580))
+#files <- oisst_daily_sst_files()
+
+
+## we can get a mean
+ext <- c(-1, 1, -1, 1) * 6378137 * pi/1.2
+res <- rep(25000, 2L)
+#mn <- vapour::gdal_raster_data(files$datasource, target_dim = dm, target_ext = ext)
+## or vectorize over sources
+#bands <- lapply(files$datasource, vapour::gdal_raster_data, target_dim = dm, target_ext = ext)
+
+
+library(furrr)
+options(parallelly.fork.enable = TRUE, future.rng.onMisuse = "ignore")
+plan(multicore)
+op <- options(warn = 1)
+func <- function(.x) vapour::gdal_raster_dsn(.x, target_res = res, target_ext = ext, target_crs = "EPSG:3031", resample = "average")[[1]]
+
+## or write to file
+system.time({
+flist <- future_map_chr(files$datasource, func) 
+})
+plan(sequential)
+
+str(basename(flist))
+# chr [1:374] "file90aa0142157a4.tif" "file90aa0453395b2.tif" "file90aa04bd28a87.tif" "file90aa05fb4b65d.tif" ...
+
+terra::rast(flist[1])
+terra::plot(terra::rast(flist[1]))
+options(op)
 ```
+
